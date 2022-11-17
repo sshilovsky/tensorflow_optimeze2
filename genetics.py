@@ -7,7 +7,7 @@ from forwardKinematicsKuka import RV
 
 
 random.seed()
-targets = [[1000], [500], [1000]]
+targets = [[264], [0], [550.9]]
 
 LIMITS = [(-np.pi, np.pi)] * 6
 NUMBER_BITS = 16
@@ -27,7 +27,7 @@ def loss_function(Q0, target):
 
 class Genome:
     def __init__(self, l=8, limits=LIMITS, gen=[], use_random=True):
-        self.fitness = np.random.rand()
+        self.fitness = None
         self.l = l
         self.limits = list(limits)
         assert len(limits) == 6
@@ -108,20 +108,19 @@ class GeneticAlgorithm:
 
     # Selection operation using tournament selection, result in two best parents from populations
     def tournament_selection(self, num):
+        max_fitness = max(genome.fitness for genome in self.populations)
+        sum_fitness = sum(max_fitness - genome.fitness for genome in self.populations)
+
         list_parents_idx = []
         for i in range(num):
-            min_fitness = 999.0
-            best_parent_idx = -1
-            for j in range(self.k):
-                accept = False
-                while not accept:
-                    parent_idx = np.random.choice(np.arange(0, len(self.populations)))
-                    if parent_idx not in list_parents_idx:
-                        accept = True
-                if self.populations[parent_idx].fitness < min_fitness:
-                    best_parent_idx = parent_idx
-                    min_fitness = self.populations[parent_idx].fitness
-            list_parents_idx.append(best_parent_idx)
+            choice = random.random()
+            sum_weight = 0
+            for j, genome in enumerate(self.populations):
+                weight = (max_fitness - genome.fitness) / sum_fitness
+                sum_weight += weight
+                if sum_weight >= choice:
+                    break
+            list_parents_idx.append(j)
         return tuple(list_parents_idx)
 
     # Here evolution process
@@ -133,6 +132,10 @@ class GeneticAlgorithm:
             print("Generation ", generation)
             # Generate new children
             child_populations = []
+            for genome in self.populations:
+                if genome.fitness is None:
+                    genome.fitness = loss_function(genome.decode(), targets)
+
             while len(child_populations) < self.population_size:
                 # Select best parent from population
                 parents = self.tournament_selection(num=2)
