@@ -6,9 +6,11 @@ import random
 from forwardKinematicsKuka import RV
 
 
+random.seed()
 targets = [[1000], [500], [1000]]
 
 LIMITS = [(-np.pi, np.pi)] * 6
+NUMBER_BITS = 16
 
 
 def loss_function(Q0, target):
@@ -59,7 +61,7 @@ class GeneticAlgorithm:
         n_generations=10,
         population_size=5,
         prob_crossover=0.5,
-        prob_mutation=0.01,
+        prob_mutation=0.05,
         k=3,
     ):
         # Here we define simple 2 link arm robot with length l1 = 50 and l2 = 50
@@ -74,7 +76,7 @@ class GeneticAlgorithm:
         self.populations = []
         for i in range(population_size):
             # limits equal with joints angle limit in range -pi to pi
-            pop = Genome(l=16)
+            pop = Genome(l=NUMBER_BITS)
             self.populations.append(pop)
 
     # Crossover operation between two parents, result in two children genotype
@@ -82,43 +84,18 @@ class GeneticAlgorithm:
         self,
         parent_1_idx,
         parent_2_idx,
-        split_idx=None,
     ):
+        gen1 = self.populations[parent_1_idx].genotype
+        gen2 = self.populations[parent_2_idx].genotype
         if random.random() > self.prob_mutation:
-            return self.populations[parent_1_idx].genotype, self.populations[parent_2_idx].genotype
+            return gen1, gen2
 
         genotype_len = self.populations[parent_1_idx].genotype_len
-        if split_idx is None:
-            idx0 = random.randint(0, genotype_len - 3)
-            idx1 = random.randint(idx0 + 1, genotype_len - 2)
-            idx2 = random.randint(idx1 + 1, genotype_len - 1)
-            split_idx = [idx0, idx1, idx2]
-        child_1_genotype = np.hstack(
-            (
-                self.populations[parent_1_idx].genotype[0 : split_idx[0]],
-                self.populations[parent_2_idx].genotype[split_idx[0] : split_idx[1]],
-                self.populations[parent_1_idx].genotype[split_idx[1] : split_idx[2]],
-                self.populations[parent_2_idx].genotype[split_idx[2] :],
-            )
-        )
-        child_2_genotype = np.hstack(
-            (
-                self.populations[parent_2_idx].genotype[0 : split_idx[0]],
-                self.populations[parent_1_idx].genotype[split_idx[0] : split_idx[1]],
-                self.populations[parent_2_idx].genotype[split_idx[1] : split_idx[2]],
-                self.populations[parent_1_idx].genotype[split_idx[2] :],
-            )
-        )
 
-        # child_3_genotype = np.hstack(
-        #     (
-        #         self.populations[parent_3_idx].genotype[0 : split_idx[0]],
-        #         self.populations[parent_2_idx].genotype[split_idx[0] : split_idx[1]],
-        #         self.populations[parent_3_idx].genotype[split_idx[1] : split_idx[2]],
-        #         self.populations[parent_2_idx].genotype[split_idx[2] :],
-        #     )
-        # )
-        return child_1_genotype, child_2_genotype
+        idx0 = random.randint(1, genotype_len - 1)
+        new_gen1 = np.hstack((gen1[:idx0], gen2[idx0:]))
+        new_gen2 = np.hstack((gen2[:idx0], gen1[idx0:]))
+        return new_gen1, new_gen2
 
     # Mutation operation of children genotype, result in new children genotype
     def mutation(self, child_genotype):
@@ -166,7 +143,7 @@ class GeneticAlgorithm:
 
                 for child_genotype in children:
                     child = Genome(
-                        l=16,
+                        l=NUMBER_BITS,
                         gen=child_genotype,
                         use_random=False,
                     )
