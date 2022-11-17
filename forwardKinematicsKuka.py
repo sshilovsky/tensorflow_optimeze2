@@ -135,5 +135,5 @@ Q56 = tf.Variable(0 * r, dtype=tf.float32)
 
 Q0 = [Q01, Q12, Q23, Q34, Q45, Q56]
 
-print(RV.getXYZ(Q0).numpy())
-
+if __name__ == "__main__":
+    print(RV.getXYZ(Q0).numpy())
