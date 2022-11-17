@@ -1,9 +1,9 @@
 import tensorflow as tf
 import numpy as np
 
-'''
+"""
 Класс, представляющий собой одну кинематическую пару
-'''
+"""
 
 
 class KinematicPart:
@@ -23,16 +23,26 @@ class KinematicPart:
 
     def getMatrix(self, q):
         return [
-            [tf.cos(q), -tf.sin(q) * tf.cos(self.alpha), tf.sin(q) * tf.sin(self.alpha), self.a * tf.cos(q)],
-            [tf.sin(q), tf.cos(q) * tf.cos(self.alpha), -tf.cos(q) * tf.sin(self.alpha), self.a * tf.sin(q)],
+            [
+                tf.cos(q),
+                -tf.sin(q) * tf.cos(self.alpha),
+                tf.sin(q) * tf.sin(self.alpha),
+                self.a * tf.cos(q),
+            ],
+            [
+                tf.sin(q),
+                tf.cos(q) * tf.cos(self.alpha),
+                -tf.cos(q) * tf.sin(self.alpha),
+                self.a * tf.sin(q),
+            ],
             [0, tf.sin(self.alpha), tf.cos(self.alpha), self.s],
-            [0, 0, 0, 1]
+            [0, 0, 0, 1],
         ]
 
 
-'''
+"""
 Класс робота, состоящего из пар
-'''
+"""
 
 
 class Robot:
@@ -45,29 +55,32 @@ class Robot:
         self.penaltiesMin = [(p.borderMin) for p in self.parts]
         self.penaltiesMax = [(p.borderMax) for p in self.parts]
 
-    '''
+    """
     Получить значение штрафа для данных обобщенных координат
-    '''
+    """
 
     def penalty(self, Q, W1=1, W2=1):
 
-        reduce_to_nil = lambda n: tf.cond(n > 0,
-                                          lambda: tf.constant(0, dtype=tf.float32), lambda: tf.abs(n))
+        reduce_to_nil = lambda n: tf.cond(
+            n > 0, lambda: tf.constant(0, dtype=tf.float32), lambda: tf.abs(n)
+        )
 
         return W1 * tf.reduce_sum(
             tf.map_fn(reduce_to_nil, tf.subtract(Q, self.penaltiesMin))
-        ) + W2 * tf.reduce_sum(tf.map_fn(reduce_to_nil, tf.subtract(self.penaltiesMax, Q)))
+        ) + W2 * tf.reduce_sum(
+            tf.map_fn(reduce_to_nil, tf.subtract(self.penaltiesMax, Q))
+        )
 
-    '''
+    """
     Получить координаты схвата (конечного звена)
-    '''
+    """
 
     def getXYZ(self, Q):
         return self.getXYZPair(Q, len(self.parts))[:3]
 
-    '''
+    """
     Получить координаты конкретной пары 
-    '''
+    """
 
     def getXYZPair(self, Q, pair):
 
@@ -80,13 +93,15 @@ class Robot:
 
             resultMatrix = tf.matmul(resultMatrix, p.getMatrix(Q[i]))
 
-        xyz1 = tf.matmul(resultMatrix, tf.constant([[0], [0], [0], [1]], dtype=tf.float32))
+        xyz1 = tf.matmul(
+            resultMatrix, tf.constant([[0], [0], [0], [1]], dtype=tf.float32)
+        )
 
         return xyz1
 
-    '''
+    """
     Массив координат всех пар (для построения графика)
-    '''
+    """
 
     def getPairPoints(self, Q):
 
@@ -108,7 +123,7 @@ Z3 = KinematicPart(0, 160, 0, bmin=-360 * r, bmax=360 * r)
 Z4 = KinematicPart(0, 0, np.pi / 2, bmin=180 * r, bmax=180 * r)
 Z5 = KinematicPart(0, 104.9, np.pi / 2, bmin=-5 * r, bmax=15 * r)
 
-parts = [Z1, Z2, Z3, Z4, Z5]#, Z6]
+parts = [Z1, Z2, Z3, Z4, Z5]  # , Z6]
 
 RV = Robot(parts)
 
@@ -123,4 +138,3 @@ Q45 = tf.Variable(0 * r, dtype=tf.float32)
 Q0 = [Q01, Q12, Q23, Q34, Q45]
 
 print(RV.getXYZ(Q0).numpy())
-

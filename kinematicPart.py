@@ -19,7 +19,18 @@ class KinematicPart:
 
     def getMatrix(self, q):
         return [
-            [tf.cos(q), -tf.sin(q) * tf.cos(self.alpha), tf.sin(q) * tf.sin(self.alpha), self.a * tf.cos(q)],
-            [tf.sin(q), tf.cos(q) * tf.cos(self.alpha), -tf.cos(q) * tf.sin(self.alpha), self.a * tf.sin(q)],
+            [
+                tf.cos(q),
+                -tf.sin(q) * tf.cos(self.alpha),
+                tf.sin(q) * tf.sin(self.alpha),
+                self.a * tf.cos(q),
+            ],
+            [
+                tf.sin(q),
+                tf.cos(q) * tf.cos(self.alpha),
+                -tf.cos(q) * tf.sin(self.alpha),
+                self.a * tf.sin(q),
+            ],
             [0, tf.sin(self.alpha), tf.cos(self.alpha), self.s],
-            [0, 0, 0, 1]]
+            [0, 0, 0, 1],
+        ]

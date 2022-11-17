@@ -37,10 +37,8 @@ Q0 = [Q01, Q12, Q23, Q34, Q45]
 target = tf.Variable([[260], [0], [540]], dtype=tf.float32)
 
 learning_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
-    0.5,
-    decay_steps=10,
-    decay_rate=0.96,
-    staircase=False)
+    0.5, decay_steps=10, decay_rate=0.96, staircase=False
+)
 
 
 def loss_function(Q0):
@@ -69,19 +67,21 @@ for val in trajectory:
         grads = tape.gradient(y, [Q01, Q12, Q23, Q34])
         grads_and_vars = zip(grads, [Q01, Q12, Q23, Q34])
 
-        print('#######################')
-        print('Q01 = {:.5f}, Q02 = {:.5f}, Q03 = {:.5f},  Q04 = {:.5f}, Q05 = {:.5f}, grads = {:.5f}'.format(
-            Q01.numpy() / radian,
-            Q12.numpy() / radian,
-            Q23.numpy() / radian,
-            Q34.numpy() / radian,
-            Q45.numpy() / radian,
-            y.numpy()
-        ))
+        print("#######################")
+        print(
+            "Q01 = {:.5f}, Q02 = {:.5f}, Q03 = {:.5f},  Q04 = {:.5f}, Q05 = {:.5f}, grads = {:.5f}".format(
+                Q01.numpy() / radian,
+                Q12.numpy() / radian,
+                Q23.numpy() / radian,
+                Q34.numpy() / radian,
+                Q45.numpy() / radian,
+                y.numpy(),
+            )
+        )
         optimizer.apply_gradients(grads_and_vars)
-        print('target: = ')
+        print("target: = ")
         print(target.numpy())
-        print('xyz: = ')
+        print("xyz: = ")
         print(RV.getXYZ(Q0).numpy())
         loss = y.numpy()
 
@@ -103,6 +103,6 @@ ax = fig.gca()
 
 ax.set_ylabel("Значение обобщенной координаты")
 ax.set_xlabel("Точка")
-ax.grid(color='black', linestyle='-', linewidth=0.5)
+ax.grid(color="black", linestyle="-", linewidth=0.5)
 ax.plot([10, 20, 30, 40, 50, 60], obobq1, color="m")
 plt.show()
