@@ -1,4 +1,3 @@
-import tensorflow as tf
 import numpy as np
 
 """
@@ -6,49 +5,11 @@ import numpy as np
 """
 
 
-class KinematicPart:
-    s = tf.constant(0, dtype=tf.float32)
-    a = tf.constant(0, dtype=tf.float32)
-    alpha = tf.constant(0, dtype=tf.float32)
-
-    borderMin = tf.constant(0, dtype=tf.float32)
-    borderMax = tf.constant(0, dtype=tf.float32)
-
-    def __init__(self, s, a, alpha, bmin, bmax):
-        self.s = tf.constant(s, dtype=tf.float32)
-        self.a = tf.constant(a, dtype=tf.float32)
-        self.alpha = tf.constant(alpha, dtype=tf.float32)
-        self.borderMin = tf.constant(bmin, dtype=tf.float32)
-        self.borderMax = tf.constant(bmax, dtype=tf.float32)
-
-    def getMatrix(self, q):
-        return [
-            [
-                tf.cos(q),
-                -tf.sin(q) * tf.cos(self.alpha),
-                tf.sin(q) * tf.sin(self.alpha),
-                self.a * tf.cos(q),
-            ],
-            [
-                tf.sin(q),
-                tf.cos(q) * tf.cos(self.alpha),
-                -tf.cos(q) * tf.sin(self.alpha),
-                self.a * tf.sin(q),
-            ],
-            [0, tf.sin(self.alpha), tf.cos(self.alpha), self.s],
-            [0, 0, 0, 1],
-        ]
-
-
-"""
-Класс робота, состоящего из пар
-"""
-
-
 class Robot:
     parts = []
     penaltiesMin = None
     penaltiesMax = None
+    scores = 100
 
     def __init__(self, parts):
         self.parts = parts
@@ -61,14 +22,13 @@ class Robot:
 
     def penalty(self, Q, W1=1, W2=1):
 
-        reduce_to_nil = lambda n: tf.cond(
-            n > 0, lambda: tf.constant(0, dtype=tf.float32), lambda: tf.abs(n)
-        )
+        # lambda (t): (200 * exp(-t)) if t > 200 else (400 * exp(-t))
+        reduce_to_nil = lambda n: 0 if n > 0 else np.abs(n)
 
-        return W1 * tf.reduce_sum(
-            tf.map_fn(reduce_to_nil, tf.subtract(Q, self.penaltiesMin))
-        ) + W2 * tf.reduce_sum(
-            tf.map_fn(reduce_to_nil, tf.subtract(self.penaltiesMax, Q))
+        subtract = np.subtract(Q, self.penaltiesMin)
+        np_subtract = np.subtract(self.penaltiesMax, Q)
+        return W1 * np.sum(list(map(reduce_to_nil, subtract))) + W2 * np.sum(
+            list(map(reduce_to_nil, np_subtract))
         )
 
     """
@@ -84,18 +44,16 @@ class Robot:
 
     def getXYZPair(self, Q, pair):
 
-        resultMatrix = tf.eye(4, dtype=tf.float32)
+        resultMatrix = np.eye(4, dtype=np.float32)
 
         for i, p in enumerate(self.parts):
 
             if i == pair:
                 break
 
-            resultMatrix = tf.matmul(resultMatrix, p.getMatrix(Q[i]))
+            resultMatrix = np.matmul(resultMatrix, p.getMatrix(Q[i]))
 
-        xyz1 = tf.matmul(
-            resultMatrix, tf.constant([[0], [0], [0], [1]], dtype=tf.float32)
-        )
+        xyz1 = np.matmul(resultMatrix, [[0], [0], [0], [1]])
 
         return xyz1
 
@@ -112,6 +70,40 @@ class Robot:
             result.append([pairXYZ[0], pairXYZ[1], pairXYZ[2]])
 
         return result
+
+
+class KinematicPart:
+    s = 0
+    a = 0
+    alpha = 0
+
+    borderMin = 0
+    borderMax = 0
+
+    def __init__(self, s, a, alpha, bmin, bmax):
+        self.s = s
+        self.a = a
+        self.alpha = alpha
+        self.borderMin = bmin
+        self.borderMax = bmax
+
+    def getMatrix(self, q):
+        return [
+            [
+                np.cos(q),
+                -np.sin(q) * np.cos(self.alpha),
+                np.sin(q) * np.sin(self.alpha),
+                self.a * np.cos(q),
+            ],
+            [
+                np.sin(q),
+                np.cos(q) * np.cos(self.alpha),
+                -np.cos(q) * np.sin(self.alpha),
+                self.a * np.sin(q),
+            ],
+            [0, np.sin(self.alpha), np.cos(self.alpha), self.s],
+            [0, 0, 0, 1],
+        ]
 
 
 r = np.pi / 180.0
@@ -140,15 +132,15 @@ parts = [Z1, Z2, Z3, Z4, Z5, Z6]
 RV = Robot(parts)
 
 
-Q01 = tf.Variable(0 * r, dtype=tf.float32)
-Q12 = tf.Variable(0 * r, dtype=tf.float32)
-Q23 = tf.Variable(0 * r, dtype=tf.float32)
-Q34 = tf.Variable(0 * r, dtype=tf.float32, trainable=False)
-Q45 = tf.Variable(0 * r, dtype=tf.float32)
-Q56 = tf.Variable(0 * r, dtype=tf.float32)
+Q01 = 0 * r
+Q12 = 0 * r
+Q23 = 0 * r
+Q34 = 0 * r
+Q45 = 0 * r
+Q56 = 0 * r
 
 
 Q0 = [Q01, Q12, Q23, Q34, Q45, Q56]
 
 if __name__ == "__main__":
-    print(RV.getXYZ(Q0).numpy())
+    print(RV.getXYZ(Q0))
