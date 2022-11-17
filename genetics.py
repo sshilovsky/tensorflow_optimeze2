@@ -1,11 +1,14 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+import sys
 
 from forwardKinematicsKuka import RV, Q0
 
 
-targets = [[264], [0], [550.9]]
+targets = [[1000], [500], [1000]]
+
+LIMITS = [(-np.pi, np.pi)] * 6
 
 
 def loss_function(Q0, target):
@@ -17,11 +20,15 @@ def loss_function(Q0, target):
     # return euclidean(target, xyz) + penalty
 
 
-class Population:
-    def __init__(self, l=8, limits=[(0, 1, 2)], gen=[], use_random=True):
+# print(loss_function(Q0, targets))
+
+
+class Genome:
+    def __init__(self, l=8, limits=LIMITS, gen=[], use_random=True):
         self.fitness = np.random.rand()
         self.l = l
-        self.limits = limits
+        self.limits = list(limits)
+        assert len(limits) == 6
         self.genotype_len = len(self.limits) * self.l
         if use_random:
             self.genotype = np.random.randint(0, 2, self.genotype_len)
@@ -50,7 +57,7 @@ class GeneticAlgorithm:
     def __init__(
         self,
         n_generations=10,
-        n_populations=5,
+        population_size=5,
         prob_crossover=1.0,
         prob_mutation=0.1,
         k=3,
@@ -59,17 +66,15 @@ class GeneticAlgorithm:
         self.robot = RV  # RobotArm(links=[50, 50, 50])
         # Initialize GA parameter
         self.n_generations = n_generations
-        self.n_populations = n_populations
+        self.population_size = population_size
         self.prob_crossover = prob_crossover
         self.prob_mutation = prob_mutation
         self.k = k
         # Generate population randomly
         self.populations = []
-        for i in range(n_populations):
+        for i in range(population_size):
             # limits equal with joints angle limit in range -pi to pi
-            pop = Population(
-                l=16, limits=[(-np.pi, np.pi), (-np.pi, np.pi), (-np.pi, np.pi)]
-            )
+            pop = Genome(l=16)
             self.populations.append(pop)
 
     # Crossover operation between two parents, result in two children genotype
@@ -145,7 +150,7 @@ class GeneticAlgorithm:
             print("Generation ", generation)
             # Generate new children
             child_populations = []
-            while len(child_populations) < self.n_populations:
+            while len(child_populations) < self.population_size:
                 # Select best parent from population
                 parent_1_idx, parent_2_idx, parent_3_idx = self.tournament_selection()
                 # Crossover operation
@@ -157,17 +162,12 @@ class GeneticAlgorithm:
                 child_2_genotype = self.mutation(child_2_genotype)
                 child_3_genotype = self.mutation(child_3_genotype)
 
-                child = Population(
+                child = Genome(
                     l=16,
-                    limits=[(-np.pi, np.pi), (-np.pi, np.pi), (-np.pi, np.pi)],
                     gen=child_1_genotype,
                     use_random=False,
                 )
-                joint_1, joint_2, joint_3 = child.phenotype
-                # Get fitness value of new children
-                Q0[1] = joint_1
-                Q0[2] = joint_2
-                Q0[3] = joint_3
+                Q0 = list(child.phenotype)
 
                 child.fitness = loss_function(
                     Q0, targets
@@ -177,41 +177,33 @@ class GeneticAlgorithm:
                     return self.populations[best_idx].phenotype
                 child_populations.append(child)
 
-                child = Population(
+                child = Genome(
                     l=16,
-                    limits=[(-np.pi, np.pi), (-np.pi, np.pi), (-np.pi, np.pi)],
                     gen=child_2_genotype,
                     use_random=False,
                 )
-                joint_1, joint_2, joint_3 = child.phenotype
-                Q0[1] = joint_1
-                Q0[2] = joint_2
-                Q0[3] = joint_3
+                Q0 = list(child.phenotype)
                 child.fitness = loss_function(Q0, targets)
                 child_populations.append(child)
 
-                child = Population(
+                child = Genome(
                     l=16,
-                    limits=[(-np.pi, np.pi), (-np.pi, np.pi), (-np.pi, np.pi)],
                     gen=child_3_genotype,
                     use_random=False,
                 )
-                joint_1, joint_2, joint_3 = child.phenotype
-                Q0[1] = joint_1
-                Q0[2] = joint_2
-                Q0[3] = joint_3
+                Q0 = list(child.phenotype)
                 child.fitness = loss_function(Q0, targets)
                 child_populations.append(child)
 
             # Update current parent with new child and track best population
             best_idx = -1
             best_fitness = 999
-            for i in range(self.n_populations):
+            for i in range(self.population_size):
                 self.populations[i] = child_populations[i]
                 if self.populations[i].fitness < best_fitness:
                     best_idx = i
                     best_fitness = self.populations[i].fitness
-            print("Best Population :", Q0, self.populations[best_idx].fitness)
+            print("Best Genome :", Q0, self.populations[best_idx].fitness)
             print(
                 "================================================================================"
             )
@@ -224,33 +216,33 @@ class GeneticAlgorithm:
 
     def run(self):
         # Here we define target position of robot arm
-        self.robot.target_pos = [100, 50]
+        self.robot.target_pos = targets
         # Solving the solution with GA
-        joint1, joint2, joint3 = self.evolution()
+        Q0 = self.evolution()
         # Plot robot configuration
         xyz = RV.getXYZ(Q0)
-        print(xyz)
+        print(xyz, Q0, loss_function(Q0, targets))
 
-        xyz1 = RV.getXYZPair(Q0, 1)
-        xyz2 = RV.getXYZPair(Q0, 2)
-        xyz3 = RV.getXYZPair(Q0, 3)
-        xyz4 = RV.getXYZPair(Q0, 4)
+        # xyz1 = RV.getXYZPair(Q0, 1)
+        # xyz2 = RV.getXYZPair(Q0, 2)
+        # xyz3 = RV.getXYZPair(Q0, 3)
+        # xyz4 = RV.getXYZPair(Q0, 4)
 
-        fig, ax = plt.subplots()
-        ax.plot(
-            [xyz1[0], xyz2[0], xyz3[0], xyz4[0], xyz[0]],
-            [xyz1[2], xyz2[2], xyz3[2], xyz4[2], xyz[2]],
-        )
-        ax.set_title("matplotlib.axes.Axes.plot() example 1")
-        fig.canvas.draw()
-        plt.grid()
-        plt.show()
+        # fig, ax = plt.subplots()
+        # ax.plot(
+        #     [xyz1[0], xyz2[0], xyz3[0], xyz4[0], xyz[0]],
+        #     [xyz1[2], xyz2[2], xyz3[2], xyz4[2], xyz[2]],
+        # )
+        # ax.set_title("matplotlib.axes.Axes.plot() example 1")
+        # fig.canvas.draw()
+        # plt.grid()
+        # plt.show()
 
         # self.robot.plot([joint1, joint2, joint3])
 
 
 def main():
-    ga = GeneticAlgorithm(n_generations=1000, n_populations=100, k=20)
+    ga = GeneticAlgorithm(n_generations=20, population_size=100, k=20)
     ga.run()
 
 
