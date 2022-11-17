@@ -1,9 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-import sys
+import random
 
-from forwardKinematicsKuka import RV, Q0
+from forwardKinematicsKuka import RV
 
 
 targets = [[1000], [500], [1000]]
@@ -79,9 +79,18 @@ class GeneticAlgorithm:
 
     # Crossover operation between two parents, result in two children genotype
     def crossover(
-        self, parent_1_idx, parent_2_idx, parent_3_idx, split_idx=[8, 16, 24]
+        self,
+        parent_1_idx,
+        parent_2_idx,
+        # parent_3_idx,
+        split_idx=None,
     ):
         genotype_len = self.populations[parent_1_idx].genotype_len
+        if split_idx is None:
+            idx0 = random.randint(0, genotype_len - 3)
+            idx1 = random.randint(idx0 + 1, genotype_len - 2)
+            idx2 = random.randint(idx1 + 1, genotype_len - 1)
+            split_idx = [idx0, idx1, idx2]
         child_1_genotype = np.hstack(
             (
                 self.populations[parent_1_idx].genotype[0 : split_idx[0]],
@@ -99,15 +108,15 @@ class GeneticAlgorithm:
             )
         )
 
-        child_3_genotype = np.hstack(
-            (
-                self.populations[parent_3_idx].genotype[0 : split_idx[0]],
-                self.populations[parent_2_idx].genotype[split_idx[0] : split_idx[1]],
-                self.populations[parent_3_idx].genotype[split_idx[1] : split_idx[2]],
-                self.populations[parent_2_idx].genotype[split_idx[2] :],
-            )
-        )
-        return child_1_genotype, child_2_genotype, child_3_genotype
+        # child_3_genotype = np.hstack(
+        #     (
+        #         self.populations[parent_3_idx].genotype[0 : split_idx[0]],
+        #         self.populations[parent_2_idx].genotype[split_idx[0] : split_idx[1]],
+        #         self.populations[parent_3_idx].genotype[split_idx[1] : split_idx[2]],
+        #         self.populations[parent_2_idx].genotype[split_idx[2] :],
+        #     )
+        # )
+        return child_1_genotype, child_2_genotype
 
     # Mutation operation of children genotype, result in new children genotype
     def mutation(self, child_genotype):
@@ -124,9 +133,9 @@ class GeneticAlgorithm:
         return child_genotype
 
     # Selection operation using tournament selection, result in two best parents from populations
-    def tournament_selection(self):
+    def tournament_selection(self, num):
         list_parents_idx = []
-        for i in range(3):
+        for i in range(num):
             min_fitness = 999.0
             best_parent_idx = -1
             for j in range(self.k):
@@ -143,8 +152,8 @@ class GeneticAlgorithm:
 
     # Here evolution process
     def evolution(self):
+        desc = 0.5
 
-        desc = 1
         for generation in range(self.n_generations):
             # if self.robot.scores > desc:
             print("Generation ", generation)
@@ -152,48 +161,24 @@ class GeneticAlgorithm:
             child_populations = []
             while len(child_populations) < self.population_size:
                 # Select best parent from population
-                parent_1_idx, parent_2_idx, parent_3_idx = self.tournament_selection()
+                parents = self.tournament_selection(num=2)
                 # Crossover operation
-                child_1_genotype, child_2_genotype, child_3_genotype = self.crossover(
-                    parent_1_idx, parent_2_idx, parent_3_idx
-                )
+                children = self.crossover(*parents)
                 # Mutation operation
-                child_1_genotype = self.mutation(child_1_genotype)
-                child_2_genotype = self.mutation(child_2_genotype)
-                child_3_genotype = self.mutation(child_3_genotype)
+                children = [self.mutation(child) for child in children]
 
-                child = Genome(
-                    l=16,
-                    gen=child_1_genotype,
-                    use_random=False,
-                )
-                Q0 = list(child.phenotype)
-
-                child.fitness = loss_function(
-                    Q0, targets
-                )  # self.robot.calc_distance_error([joint_1, joint_2, joint_3])
-                self.robot.scores = child.fitness
-                if self.robot.scores < desc:
-                    return self.populations[best_idx].phenotype
-                child_populations.append(child)
-
-                child = Genome(
-                    l=16,
-                    gen=child_2_genotype,
-                    use_random=False,
-                )
-                Q0 = list(child.phenotype)
-                child.fitness = loss_function(Q0, targets)
-                child_populations.append(child)
-
-                child = Genome(
-                    l=16,
-                    gen=child_3_genotype,
-                    use_random=False,
-                )
-                Q0 = list(child.phenotype)
-                child.fitness = loss_function(Q0, targets)
-                child_populations.append(child)
+                for child_genotype in children:
+                    child = Genome(
+                        l=16,
+                        gen=child_genotype,
+                        use_random=False,
+                    )
+                    Q0 = list(child.phenotype)
+                    child.fitness = loss_function(
+                        Q0, targets
+                    )  # self.robot.calc_distance_error([joint_1, joint_2, joint_3])
+                    self.robot.scores = child.fitness
+                    child_populations.append(child)
 
             # Update current parent with new child and track best population
             best_idx = -1
@@ -205,7 +190,7 @@ class GeneticAlgorithm:
                     best_fitness = self.populations[i].fitness
             print("Best Genome :", Q0, self.populations[best_idx].fitness)
             print(
-                "================================================================================"
+                "--------------------------------------------------------------------------------"
             )
             xyz = RV.getXYZ(Q0)
             print(xyz)
