@@ -58,8 +58,8 @@ class GeneticAlgorithm:
         self,
         n_generations=10,
         population_size=5,
-        prob_crossover=1.0,
-        prob_mutation=0.1,
+        prob_crossover=0.5,
+        prob_mutation=0.01,
         k=3,
     ):
         # Here we define simple 2 link arm robot with length l1 = 50 and l2 = 50
@@ -82,9 +82,11 @@ class GeneticAlgorithm:
         self,
         parent_1_idx,
         parent_2_idx,
-        # parent_3_idx,
         split_idx=None,
     ):
+        if random.random() > self.prob_mutation:
+            return self.populations[parent_1_idx].genotype, self.populations[parent_2_idx].genotype
+
         genotype_len = self.populations[parent_1_idx].genotype_len
         if split_idx is None:
             idx0 = random.randint(0, genotype_len - 3)
@@ -121,15 +123,10 @@ class GeneticAlgorithm:
     # Mutation operation of children genotype, result in new children genotype
     def mutation(self, child_genotype):
         genotype_len = self.populations[0].genotype_len
-        for i in range(genotype_len):
-            mutate = np.random.choice(
-                [True, False], p=[self.prob_mutation, (1 - self.prob_mutation)]
-            )
-            if mutate:
-                if child_genotype[i] == 0:
-                    child_genotype[i] = 1
-                else:
-                    child_genotype[i] = 0
+        if random.random() < self.prob_mutation:
+            i = random.randint(0, genotype_len - 1)
+            child_genotype[i] = 1 - child_genotype[i]
+
         return child_genotype
 
     # Selection operation using tournament selection, result in two best parents from populations
@@ -227,7 +224,7 @@ class GeneticAlgorithm:
 
 
 def main():
-    ga = GeneticAlgorithm(n_generations=20, population_size=100, k=20)
+    ga = GeneticAlgorithm(n_generations=2000, population_size=100, k=20)
     ga.run()
 
 
