@@ -7,7 +7,7 @@ from forwardKinematicsKuka import RV
 
 
 random.seed()
-targets = [[264], [0], [550.9]]
+targets = [[1000], [500], [1000]]
 
 LIMITS = [(-np.pi, np.pi)] * 6
 NUMBER_BITS = 16
@@ -61,7 +61,7 @@ class GeneticAlgorithm:
         n_generations=10,
         population_size=5,
         prob_crossover=0.5,
-        prob_mutation=0.05,
+        prob_mutation=0.1,
         k=3,
     ):
         # Here we define simple 2 link arm robot with length l1 = 50 and l2 = 50
@@ -87,7 +87,7 @@ class GeneticAlgorithm:
     ):
         gen1 = self.populations[parent_1_idx].genotype
         gen2 = self.populations[parent_2_idx].genotype
-        if random.random() > self.prob_mutation:
+        if random.random() > self.prob_crossover:
             return gen1, gen2
 
         genotype_len = self.populations[parent_1_idx].genotype_len
@@ -109,27 +109,31 @@ class GeneticAlgorithm:
     # Selection operation using tournament selection, result in two best parents from populations
     def tournament_selection(self, num):
         max_fitness = max(genome.fitness for genome in self.populations)
-        sum_fitness = sum(max_fitness - genome.fitness for genome in self.populations)
+        sum_weight = sum(max_fitness - genome.fitness for genome in self.populations)
 
         list_parents_idx = []
         for i in range(num):
             choice = random.random()
-            sum_weight = 0
+            acc_ratio = 0
             for j, genome in enumerate(self.populations):
-                weight = (max_fitness - genome.fitness) / sum_fitness
-                sum_weight += weight
-                if sum_weight >= choice:
+                ratio = (max_fitness - genome.fitness) / sum_weight
+                acc_ratio += ratio
+                if acc_ratio >= choice:
                     break
             list_parents_idx.append(j)
+            # print(acc_ratio, choice, j)
         return tuple(list_parents_idx)
 
     # Here evolution process
     def evolution(self):
         desc = 0.5
+        elite = None
 
         for generation in range(self.n_generations):
             # if self.robot.scores > desc:
             print("Generation ", generation)
+            if elite is not None:
+                self.populations += [elite]
             # Generate new children
             child_populations = []
             for genome in self.populations:
@@ -165,7 +169,8 @@ class GeneticAlgorithm:
                 if self.populations[i].fitness < best_fitness:
                     best_idx = i
                     best_fitness = self.populations[i].fitness
-            print("Best Genome :", Q0, self.populations[best_idx].fitness)
+            elite = self.populations[best_idx]
+            print("Best Genome :", Q0, '\n', elite.fitness)
             print(
                 "--------------------------------------------------------------------------------"
             )
@@ -174,6 +179,8 @@ class GeneticAlgorithm:
             print(
                 "================================================================================"
             )
+            if self.populations[best_idx].fitness < desc:
+                break
         return self.populations[best_idx].phenotype
 
     def run(self):
@@ -204,7 +211,7 @@ class GeneticAlgorithm:
 
 
 def main():
-    ga = GeneticAlgorithm(n_generations=2000, population_size=100, k=20)
+    ga = GeneticAlgorithm(n_generations=20000, population_size=100, k=20)
     ga.run()
 
 
