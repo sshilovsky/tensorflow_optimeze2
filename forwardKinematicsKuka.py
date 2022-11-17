@@ -102,25 +102,38 @@ class Robot:
 r = np.pi / 180.0
 
 #
-Z1 = KinematicPart(300, 0, np.pi / 2, bmin=-185 * r, bmax=185 * r)
-Z2 = KinematicPart(0, 250, 0, bmin=50 * r, bmax=270 * r)
-Z3 = KinematicPart(0, 160, 0, bmin=-360 * r, bmax=360 * r)
-Z4 = KinematicPart(0, 0, np.pi / 2, bmin=180 * r, bmax=180 * r)
-Z5 = KinematicPart(0, 104.9, np.pi / 2, bmin=-5 * r, bmax=15 * r)
-
-parts = [Z1, Z2, Z3, Z4, Z5]#, Z6]
+Z1 = KinematicPart(400, 180, np.pi / 2, bmin=-185 * r, bmax=185 * r)
+Z2 = KinematicPart(135, 600, 180*r, bmin=180 * r, bmax=270 * r)
+Z3 = KinematicPart(135, 120, -90*r, bmin=-90 * r, bmax=360 * r)
+Z4 = KinematicPart(620, 0, 90*r, bmin=180 * r, bmax=180 * r)
+Z5 = KinematicPart(0, 0, -90 * r, bmin=-5 * r, bmax=15 * r)
+Z6 = KinematicPart(115, 0, 0, bmin=-5 * r, bmax=15 * r)
+# RevoluteJoint
+# revoluteJoint1 = CreateRevoluteJoint(400.0, 180.0, 90.0, 0.0, 60.0);
+# RevoluteJoint
+# revoluteJoint2 = CreateRevoluteJoint(135.0, 600.0, 180.0, 0.0, 60.0);
+# RevoluteJoint
+# revoluteJoint3 = CreateRevoluteJoint(135.0, 120.0, -90.0, 0.0, 60.0);
+# RevoluteJoint
+# revoluteJoint4 = CreateRevoluteJoint(620.0, 0.0, 90.0, 0.0, 60.0);
+# RevoluteJoint
+# revoluteJoint5 = CreateRevoluteJoint(0.0, 0.0, -90.0, 0.0, 60.0);
+# RevoluteJoint
+# revoluteJoint6 = CreateRevoluteJoint(115.0, 0.0, 0.0, 0.0, 60.0);
+parts = [Z1, Z2, Z3, Z4, Z5, Z6]
 
 RV = Robot(parts)
 
 
 Q01 = tf.Variable(0 * r, dtype=tf.float32)
-Q12 = tf.Variable(90 * r, dtype=tf.float32)
-Q23 = tf.Variable(270 * r, dtype=tf.float32)
+Q12 = tf.Variable(0 * r, dtype=tf.float32)
+Q23 = tf.Variable(0 * r, dtype=tf.float32)
 Q34 = tf.Variable(0 * r, dtype=tf.float32, trainable=False)
 Q45 = tf.Variable(0 * r, dtype=tf.float32)
+Q56 = tf.Variable(0 * r, dtype=tf.float32)
 
 
-Q0 = [Q01, Q12, Q23, Q34, Q45]
+Q0 = [Q01, Q12, Q23, Q34, Q45, Q56]
 
 print(RV.getXYZ(Q0).numpy())
 
